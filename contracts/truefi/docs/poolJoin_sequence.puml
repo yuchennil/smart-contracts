@@ -1,0 +1,22 @@
+@startuml joiningPool
+actor User
+
+User -> TUSD : **approve** TrueFiPool
+activate TUSD
+User <-- TUSD
+deactivate TUSD
+
+User -> TrueFiPool : **join** pool
+activate TrueFiPool
+
+TUSD <- TrueFiPool : **transferFrom** User's balance to the Pool
+activate TUSD
+TUSD <- TUSD : checks **allowance**
+TUSD <- TUSD : performs **transfer**
+TUSD --> TrueFiPool
+deactivate TUSD
+
+TrueFiPool <- TrueFiPool : **mint** pool tokens to User's balance
+User <-- TrueFiPool
+deactivate TrueFiPool
+@enduml
