@@ -1,0 +1,35 @@
+@startuml joiningPool
+actor User
+
+User -> TrueFiPool : **exit** pool
+activate TrueFiPool
+
+TrueFiPool <- TrueFiPool: check if at least one block has passed from joining
+TrueFiPool <- TrueFiPool: check if User's balance can cover requested withdraw
+TrueFiPool <- TrueFiPool: **burn** pool tokens
+
+opt when TrueFiPool's balance is not enough
+
+    TrueFiPool -> CurvePool: **removeLiquidity** to match TUSD balance, to repay User
+
+    activate CurvePool
+    CurvePool -> TUSD: request **transfer** TUSD to TrueFiPool's balance
+    
+    activate TUSD
+    TUSD <- TUSD: performs **transfer**
+    CurvePool <-- TUSD
+    deactivate TUSD
+
+    deactivate CurvePool
+    end
+
+TrueFiPool -> TUSD: request **transfer** to User's balance
+
+activate TUSD
+TUSD <- TUSD: performs transfer
+TrueFiPool <-- TUSD
+deactivate TUSD
+
+User <-- TrueFiPool
+deactivate TrueFiPool
+@enduml
