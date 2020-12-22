@@ -12,7 +12,7 @@ import {ILoanFactory} from "./interface/ILoanFactory.sol";
 import {ILoanToken} from "./interface/ILoanToken.sol";
 import {ITrueFiPool} from "./interface/ITrueFiPool.sol";
 import {ITrueRatingAgency} from "./interface/ITrueRatingAgency.sol";
-
+import {IVeTru} from "../governance/interface/IVeTru.sol";
 /**
  * @title TrueRatingAgency
  * @dev Credit prediction market for LoanTokens
@@ -69,6 +69,7 @@ contract TrueRatingAgency is ITrueRatingAgency, Ownable {
     IBurnableERC20 public trustToken;
     IArbitraryDistributor public distributor;
     ILoanFactory public factory;
+    IVeTru public veTru;
 
     /**
      * @dev % multiplied by 100. e.g. 10.5% = 1050
@@ -149,7 +150,8 @@ contract TrueRatingAgency is ITrueRatingAgency, Ownable {
     function initialize(
         IBurnableERC20 _trustToken,
         IArbitraryDistributor _distributor,
-        ILoanFactory _factory
+        ILoanFactory _factory,
+        IVeTru _veTru
     ) public initializer {
         require(address(this) == _distributor.beneficiary(), "TrueRatingAgency: Invalid distributor beneficiary");
         Ownable.initialize();
@@ -157,6 +159,8 @@ contract TrueRatingAgency is ITrueRatingAgency, Ownable {
         trustToken = _trustToken;
         distributor = _distributor;
         factory = _factory;
+        veTru = _veTru;
+        veTru.initialize();
 
         lossFactor = 2500;
         burnFactor = 2500;
@@ -303,6 +307,8 @@ contract TrueRatingAgency is ITrueRatingAgency, Ownable {
         loans[id].votes[msg.sender][choice] = loans[id].votes[msg.sender][choice].add(stake);
 
         require(trustToken.transferFrom(msg.sender, address(this), stake));
+        
+        veTru.mint(msg.sender,stake);
         emit Voted(id, msg.sender, choice, stake);
     }
 
@@ -370,6 +376,8 @@ contract TrueRatingAgency is ITrueRatingAgency, Ownable {
 
         // transfer tokens to sender and emit event
         require(trustToken.transfer(msg.sender, amountToTransfer));
+        
+        veTru.burn(msg.sender,stake);
         emit Withdrawn(id, msg.sender, stake, amountToTransfer, burned);
     }
 

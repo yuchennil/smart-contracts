@@ -87,7 +87,7 @@ abstract contract VoteToken is TimeLockedToken {
         _moveDelegates(currentDelegate, delegatee, delegatorBalance);
     }
 
-    function _transfer( address _from, address _to, uint256 _value) internal override {
+    function _transfer( address _from, address _to, uint256 _value) internal override virtual {
         super._transfer(_from, _to, _value);
         _moveDelegates(delegates[_from], delegates[_to], uint96(_value));
     }
