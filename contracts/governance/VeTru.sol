@@ -2,27 +2,53 @@
 pragma solidity ^0.6.10;
 
 import {VoteToken} from "./VoteToken.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 
+contract VeTRU is VoteToken {
+    mapping(address=>bool) whitelisted;
 
-contract VeTru is VoteToken {
-    mapping(address => bool) public whitelist;
-    address public admin;
-
-    using SafeMath for uint256;
-
-    function initialize() public {
-        require(!initalized, "already initialized");
-        owner_ = msg.sender;
-        initalized = true;
+    /**
+     * @dev Modifier to check whitelist address
+     */
+    modifier onlyWhitelisted {
+        require(whitelisted[msg.sender], "sender not whiteslited");
+        _;
     }
 
-    function mint(address _to, uint256 _amount) external onlyWhiteList{
-        _mint(_to, _amount);
+    /**
+     * @dev Add or remove an address to whitelist
+     * @param account The target address to add or remove from whitelist
+     * @param status A boolean status of add or remove from whitelist
+     */
+    function whitelist(address account, bool status) external onlyOwner {
+        whitelisted[account] = status;
     }
 
-    function burn(address _to, uint256 amount) external {
-        _burn(_to, amount);
+    /**
+     * @dev Mint veTRU token to an address
+     * @param account The target address to mint veTRU
+     * @param amount The amount to mint
+     */
+    function mint(address account, uint256 amount) external onlyWhitelisted {
+        _mint(account, amount);
+    }
+
+    /**
+     * @dev Burn veTRU token from an address
+     * @param account The target address to burn veTRU
+     * @param amount The amount to burn
+     */
+    function burn(address account, uint256 amount) external onlyWhitelisted {
+        _burn(account, amount);
+    }
+
+    /**
+     * @dev Transfer function for veTRU 
+     */
+    function _transfer() public pure {
+        // can user call _transfer(addr, addr, amount) from parent contract?
+        revert("veTRU is non-transferrable");
     }
 
     function decimals() public override pure returns (uint8) {
@@ -40,29 +66,11 @@ contract VeTru is VoteToken {
     function symbol() public override pure returns (string memory) {
         return "VeTRU";
     }
+}
 
-    function addWhitelist(address _address) public {
-        whitelist[_address] = true;
-    }
-    
-    function removeWhitelist(address _address) public {
-        whitelist[_address] = false;
-    }
-    
-    /**
-     * @dev Override ERC20 _transfer so only whitelisted addresses can transfer
-     * @param sender sender of the transaction
-     * @param recipient recipient of the transaction
-     * @param _amount amount to send
-     */
-    function _transfer(address sender,address recipient,uint256 _amount) internal override onlyWhiteList() {
-        return super._transfer(sender, recipient, _amount);
-    }
-
-    modifier onlyWhiteList {
-        require(whitelist[msg.sender] == true,
-        "Only whitelist addresses can call this function."
-        );
-        _;
-    }
+interface IVeTRU {
+    function totalSupply() external view returns (uint256);
+    function balanceOf(address account) external view returns (uint256);
+    function mint(address account, uint256 amount) external;
+    function burn(address account, uint256 amount) external; 
 }

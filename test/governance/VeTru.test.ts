@@ -27,7 +27,7 @@ import {
 
 use(solidity)
 
-describe('VeTRU', () => {
+describe('VeTru', () => {
   let owner: Wallet, timeLockRegistry: Wallet, saftHolder: Wallet, initialHolder: Wallet, secondAccount: Wallet, thirdAccount: Wallet, fourthAccount: Wallet
   let trustToken: TrustToken
   let veTru: VeTru
@@ -55,19 +55,21 @@ describe('VeTRU', () => {
     // await veTru.initialize()
     await mockFactory.mock.isLoanToken.returns(true)    
     await distributor.initialize(trueRatingAgency.address, trustToken.address, parseTRU(100))
-    await trueRatingAgency.initialize(trustToken.address,distributor.address,mockFactory.address,veTru.address)
+    await trueRatingAgency.initialize(trustToken.address,distributor.address,mockFactory.address)
 
     // mint TRU token and add rater to the white list
     await trustToken.mint(owner.address,parseTRU(100))
     await trustToken.approve(trueRatingAgency.address,parseTRU(100))
-    await veTru.connect(owner).addWhitelist(trueRatingAgency.address)
+    await veTru.connect(owner).whitelist(trueRatingAgency.address,true)
   })
-
+  const vote = async() => {
+    await trueRatingAgency.allow(owner.address, true)
+    await trueRatingAgency.submit(loanToken.address, { gasLimit: 4_000_000 })
+    await trueRatingAgency.connect(owner).yes(loanToken.address,parseTRU(100))
+  }
   describe('RatingAgency', () => {
     beforeEach(async ()=> {
-        await trueRatingAgency.allow(owner.address, true)
-        await trueRatingAgency.submit(loanToken.address, { gasLimit: 4_000_000 })
-        await trueRatingAgency.connect(owner).yes(loanToken.address,parseTRU(100))
+        await vote()
     })
     describe('Mint', () => {
         it('mint the same amout of VeTru', async () => {
@@ -75,9 +77,17 @@ describe('VeTRU', () => {
         })
     })
     describe('Burn', () => {
-        it('mint the same amout of VeTru', async () => {
+        it('burn all of the veTru', async () => {
             await trueRatingAgency.connect(owner).withdraw(loanToken.address, parseTRU(100))
             expect(await veTru.balanceOf(owner.address)).to.eq(parseTRU(0))
+        })
+    })
+    describe('non-transferrable', () => {
+        beforeEach(async() => {
+            await vote()
+        })
+        it('should revert when transfer',async () => {
+            expect(await veTru.transfer(secondAccount.address,parseTRU(100))).to.be.reverted
         })
     })
   })

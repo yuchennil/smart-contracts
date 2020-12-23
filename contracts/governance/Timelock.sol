@@ -13,7 +13,7 @@
 pragma solidity ^0.6.10;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "./common/ClaimableContract.sol";
+import {ClaimableContract} from "./common/ClaimableContract.sol";
 
 contract Timelock is ClaimableContract{
     using SafeMath for uint;
