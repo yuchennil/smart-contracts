@@ -26,7 +26,7 @@ opt when TrueFiPool's balance is not enough
 TrueFiPool -> TUSD: request **transfer** to User's balance
 
 activate TUSD
-TUSD <- TUSD: performs transfer
+TUSD <- TUSD: performs **transfer**
 TrueFiPool <-- TUSD
 deactivate TUSD
 
