@@ -6,17 +6,19 @@ activate TUSD
 User <-- TUSD
 deactivate TUSD
 
-User -> TrueFiPool : **join** pool
+User -> TrueFiPool : **join** pool with //amount//
 activate TrueFiPool
+TrueFiPool <- TrueFiPool : calculate //fee//
 
-TUSD <- TrueFiPool : **transferFrom** User's balance to the Pool
+TUSD <- TrueFiPool : **transferFrom** (//amount//) User's balance to the Pool
 activate TUSD
 TUSD <- TUSD : checks **allowance**
 TUSD <- TUSD : performs **transfer**
 TUSD --> TrueFiPool
 deactivate TUSD
 
-TrueFiPool <- TrueFiPool : **mint** pool tokens to User's balance
+TrueFiPool <- TrueFiPool : **add** (//fee//) to //claimableFees//
+TrueFiPool <- TrueFiPool : **mint** (//amount// - //fee//) pool tokens to User's balance
 User <-- TrueFiPool
 deactivate TrueFiPool
 @enduml

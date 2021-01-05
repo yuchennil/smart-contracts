@@ -1,4 +1,4 @@
-@startuml joiningPool
+@startuml liquidExitingPool
 actor User
 
 User -> TrueFiPool : **exit** pool
