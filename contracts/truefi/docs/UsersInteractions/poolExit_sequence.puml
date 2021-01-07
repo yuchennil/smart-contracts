@@ -8,14 +8,14 @@ TrueFiPool <- TrueFiPool: check if at least one block has passed from joining
 TrueFiPool <- TrueFiPool: check if PoolParticipant's balance can cover requested withdraw
 TrueFiPool <- TrueFiPool: **burn** pool tokens
 
-TrueFiPool -> TrueLender: **distribute** portion of every existing loan's TrustTokens
+TrueFiPool -> TrueLender: **distribute** portion of every existing loan's **LoanToken**
 activate TrueLender
 
 loop for each LoanToken
 
     TrueLender -> LoanToken: request **transfer** to PoolParticipant's balance 
     activate LoanToken
-    LoanToken <- LoanToken: **transfer** a portion of TrustTokens to PoolParticipant's balance
+    LoanToken <- LoanToken: **transfer** a portion of **LoanToken** to PoolParticipant's balance
     TrueLender <-- LoanToken
     deactivate LoanToken
     end

@@ -1,7 +1,7 @@
 @startuml joiningPool
 actor Owner #Red
 actor Borrower #Green
-actor PoolParticipants
+actor TruHolders
 
 Borrower -> LoanFactory : **createLoanToken**
 activate LoanFactory
@@ -24,11 +24,12 @@ deactivate TrueRatingAgency
 
 Borrower -> TrueRatingAgency : **submit** **LoanToken**
 activate TrueRatingAgency
+TrueRatingAgency <- TrueRatingAgency : check if **status** is //void//
 TrueRatingAgency <- TrueRatingAgency : check if Borrower is in //allowedSubmitters//
 
 TrueRatingAgency -> LoanFactory : check if **LoanToken** is created by **LoanFactory**
 activate LoanFactory
-LoanFactory <- LoanFactory : checks if //isLoanToken//
+LoanFactory <- LoanFactory : checks if in //isLoanToken//
 TrueRatingAgency <-- LoanFactory
 deactivate LoanFactory
 
@@ -38,25 +39,29 @@ deactivate TrueRatingAgency
 break when Borrower wants to retract
     Borrower -> TrueRatingAgency : **retract** **LoanToken**
     activate TrueRatingAgency
+    TrueRatingAgency <- TrueRatingAgency : checks if **status** is //pending//
     TrueRatingAgency <- TrueRatingAgency : checks if Borrower created **LoanToken**
     TrueRatingAgency <- TrueRatingAgency : deletes LoanToken from **TrueRatingAgency**
     Borrower <-- TrueRatingAgency
     deactivate TrueRatingAgency
     end
 
-PoolParticipants -> TrueRatingAgency : vote **yes/no** with stakes for **LoanToken**
+TruHolders -> TrueRatingAgency : vote **yes/no** with stakes for **LoanToken**
 activate TrueRatingAgency
-TrueRatingAgency <- TrueRatingAgency : add votes to the pool
-PoolParticipants <-- TrueRatingAgency
+TrueRatingAgency <- TrueRatingAgency : check if **status** is //pending//
+TrueRatingAgency <- TrueRatingAgency : add vote stakes to votes and predictions
+TruHolders <-- TrueRatingAgency
 deactivate TrueRatingAgency
 
 opt when PoolParticipant wants to withdraw some/all votes
-    PoolParticipants -> TrueRatingAgency : withdraw stakes **yes/no** votes
+    TruHolders -> TrueRatingAgency : **withdraw** staked **yes/no** votes
     activate TrueRatingAgency
-    TrueRatingAgency <- TrueRatingAgency : remove votes from the pool
-    PoolParticipants <-- TrueRatingAgency
+    TrueRatingAgency <- TrueRatingAgency : check if **status** is __not__ //running//
+    TrueRatingAgency <- TrueRatingAgency : remove vote stakes from votes and predictions
+    TruHolders <-- TrueRatingAgency
     deactivate TrueRatingAgency
     end
+
 
 
 @enduml
