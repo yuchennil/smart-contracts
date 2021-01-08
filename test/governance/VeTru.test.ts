@@ -14,8 +14,8 @@ import {
 import {
   TrustTokenFactory,
   TrustToken,
-  VeTruFactory,
-  VeTru,
+  stkTRUFactory,
+  stkTRU,
   TrueRatingAgencyFactory,
   TrueRatingAgency,
   LoanTokenFactory,
@@ -27,10 +27,10 @@ import {
 
 use(solidity)
 
-describe('VeTru', () => {
+describe('stkTRU', () => {
   let owner: Wallet, timeLockRegistry: Wallet, saftHolder: Wallet, initialHolder: Wallet, secondAccount: Wallet, thirdAccount: Wallet, fourthAccount: Wallet
   let trustToken: TrustToken
-  let veTru: VeTru
+  let stkTRU: stkTRU
   let loanToken: LoanToken
   let trueRatingAgency: TrueRatingAgency
   let distributor: ArbitraryDistributor
@@ -45,14 +45,14 @@ describe('VeTru', () => {
     // deploy all related contracts ?
     trustToken = await deployContract(TrustTokenFactory)
     mockFactory = await deployMockContract(owner, ILoanFactoryJson.abi)
-    veTru = await deployContract(VeTruFactory)
+    stkTRU = await deployContract(stkTRUFactory)
     distributor = await deployContract(ArbitraryDistributorFactory)
     trueRatingAgency = await deployContract(TrueRatingAgencyFactory)
     loanToken = await deployContract(LoanTokenFactory,trustToken.address,initialHolder.address, secondAccount.address,parseTRU(1000),3600*24,1000)
 
     // initialize all contracts
     await trustToken.initialize()
-    // await veTru.initialize()
+    // await stkTRU.initialize()
     await mockFactory.mock.isLoanToken.returns(true)    
     await distributor.initialize(trueRatingAgency.address, trustToken.address, parseTRU(100))
     await trueRatingAgency.initialize(trustToken.address,distributor.address,mockFactory.address)
@@ -60,7 +60,7 @@ describe('VeTru', () => {
     // mint TRU token and add rater to the white list
     await trustToken.mint(owner.address,parseTRU(100))
     await trustToken.approve(trueRatingAgency.address,parseTRU(100))
-    await veTru.connect(owner).whitelist(trueRatingAgency.address,true)
+    await stkTRU.connect(owner).whitelist(trueRatingAgency.address,true)
   })
   const vote = async() => {
     await trueRatingAgency.allow(owner.address, true)
@@ -72,14 +72,14 @@ describe('VeTru', () => {
         await vote()
     })
     describe('Mint', () => {
-        it('mint the same amout of VeTru', async () => {
-            expect(await veTru.balanceOf(owner.address)).to.eq(parseTRU(100))
+        it('mint the same amout of stkTRU', async () => {
+            expect(await stkTRU.balanceOf(owner.address)).to.eq(parseTRU(100))
         })
     })
     describe('Burn', () => {
-        it('burn all of the veTru', async () => {
+        it('burn all of the stkTRU', async () => {
             await trueRatingAgency.connect(owner).withdraw(loanToken.address, parseTRU(100))
-            expect(await veTru.balanceOf(owner.address)).to.eq(parseTRU(0))
+            expect(await stkTRU.balanceOf(owner.address)).to.eq(parseTRU(0))
         })
     })
     describe('non-transferrable', () => {
@@ -87,7 +87,7 @@ describe('VeTru', () => {
             await vote()
         })
         it('should revert when transfer',async () => {
-            expect(await veTru.transfer(secondAccount.address,parseTRU(100))).to.be.reverted
+            expect(await stkTRU.transfer(secondAccount.address,parseTRU(100))).to.be.reverted
         })
     })
   })

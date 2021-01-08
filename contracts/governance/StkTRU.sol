@@ -5,7 +5,7 @@ import {VoteToken} from "./VoteToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 
-contract VeTRU is VoteToken {
+contract StkTRU is VoteToken {
     mapping(address=>bool) whitelisted;
 
     /**
@@ -26,8 +26,8 @@ contract VeTRU is VoteToken {
     }
 
     /**
-     * @dev Mint veTRU token to an address
-     * @param account The target address to mint veTRU
+     * @dev Mint stkTRU token to an address
+     * @param account The target address to mint stkTRU
      * @param amount The amount to mint
      */
     function mint(address account, uint256 amount) external onlyWhitelisted {
@@ -35,20 +35,12 @@ contract VeTRU is VoteToken {
     }
 
     /**
-     * @dev Burn veTRU token from an address
-     * @param account The target address to burn veTRU
+     * @dev Burn stkTRU token from an address
+     * @param account The target address to burn stkTRU
      * @param amount The amount to burn
      */
     function burn(address account, uint256 amount) external onlyWhitelisted {
         _burn(account, amount);
-    }
-
-    /**
-     * @dev Transfer function for veTRU 
-     */
-    function _transfer() public pure {
-        // can user call _transfer(addr, addr, amount) from parent contract?
-        revert("veTRU is non-transferrable");
     }
 
     function decimals() public override pure returns (uint8) {
@@ -60,15 +52,15 @@ contract VeTRU is VoteToken {
     }
 
     function name() public override pure returns (string memory) {
-        return "VeTRU";
+        return "Staked TRU";
     }
 
     function symbol() public override pure returns (string memory) {
-        return "VeTRU";
+        return "stkTRU";
     }
 }
 
-interface IVeTRU {
+interface IStkTRU {
     function totalSupply() external view returns (uint256);
     function balanceOf(address account) external view returns (uint256);
     function mint(address account, uint256 amount) external;
