@@ -43,4 +43,7 @@ interface ITrueFiPool is IERC20 {
      * 2. Only lending pool should be allowed to call this
      */
     function repay(uint256 amount) external;
+
+    function liquidValue() external view  returns (uint256);
+    function poolValue() external view returns (uint256);
 }

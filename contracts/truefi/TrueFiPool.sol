@@ -173,7 +173,7 @@ contract TrueFiPool is ITrueFiPool, ERC20, ReentrancyGuard, Ownable {
     /**
      * @dev Virtual value of liquid assets in the pool
      */
-    function liquidValue() public view returns (uint256) {
+    function liquidValue() public view override returns (uint256) {
         return currencyBalance().add(yTokenValue());
     }
 
@@ -182,7 +182,7 @@ contract TrueFiPool is ITrueFiPool, ERC20, ReentrancyGuard, Ownable {
      * "virtual price" of entire pool - LoanTokens, TUSD, curve y pool tokens
      * @return pool value in TUSD
      */
-    function poolValue() public view returns (uint256) {
+    function poolValue() public view override returns (uint256) {
         return liquidValue().add(_lender.value());
     }
 
