@@ -79,20 +79,24 @@ contract TrueFiStaking is ClaimableContract {
      * @dev Initialize sets the addresses of admin and the delay timestamp
      * @param stkTRU_ The address of stkTRU contract
      * @param tru_ The address of TRU contract
+     * @param _trueDistributor The address of True Distributor
+     * @param _pool The address of TrueFi pool
+     * @param _uniRouter The address of uniswap router
      */
-    function initialize(address stkTRU_, 
-                        address tru_, 
-                        address _trueDistributor, 
-                        address _pool,
-                        address _uniRouter) external {
+    function initialize(
+        IStkTRU stkTRU_, 
+        IERC20 tru_, 
+        ITrueDistributor _trueDistributor, 
+        ITrueFiPool _pool,
+        IUniswapRouter _uniRouter
+    ) external {
         require(!initalized, "Already initialized");
-
-        stkTRU = IStkTRU(stkTRU_);
-        tru = IERC20(tru_);
-        trueDistributor = ITrueDistributor(_trueDistributor);
-        pool = ITrueFiPool(_pool);
-        uniRouter = IUniswapRouter(_uniRouter);
-
+        
+        stkTRU = stkTRU_;
+        tru = tru_;
+        trueDistributor = _trueDistributor;
+        pool = _pool;
+        uniRouter = _uniRouter;
         owner_ = msg.sender;
         initalized = true;
 
@@ -155,27 +159,49 @@ contract TrueFiStaking is ClaimableContract {
         // ILoanToken loanToken = ILoanToken(_loanToken);
         // require(loanToken.status == loanToken.Status.Defaulted,"loanToken has not defaulted");
 
-        uint256 amountDefault = loanToken.amount();
+        uint256 amountDeficit = getLoanDeficitAmount(loanToken);
         uint256 maxToSlash = tru.balanceOf(address(this)).mul(MAXSLASH).div(10000);
-        uint256 amountToPay = amountDefault > maxToSlash ? maxToSlash : amountDefault;
+        amountDeficit = amountDeficit > maxToSlash ? maxToSlash : amountDeficit;
+        uint256 amountToPay = getTruAmount(amountDeficit);
 
         require(tru.transfer(address(pool), amountToPay));
         emit Liquidation(amountToPay);
     }
 
     /**
-     * @dev Return the TruPrice from Uniswap pool
+     * @dev Return the Tru amount based on the current price on Uniswap
      */
-    function getTruPrice() internal returns(uint256) {
-        return 1;
+    function getTruAmount(uint256 usdAmount) internal returns(uint256) {
+        address[] memory path = new address[](2);
+        path[0] = address("0x0000000000085d4780B73119b644AE5ecd22b376");  // TUSD address on mainnet
+        path[1] = address("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2");  // WETH address on mainnet
+        uint256 EthPrice = uniRouter.getAmountsIn(1, path);
+        uint256 EthAmount = usdAmount.div(EthPrice).mul(1e10);
+
+        path[0] = "0x4c19596f5aaff459fa38b0f7ed92f11ae6543784";         // TRU address on mainnet
+        uint256 truAmount = uniRouter.getAmountsIn(EthAmount, path);
+        return truAmount;
+    }
+
+    function getLoanDeficitAmount(ILoanToken loanToken) internal returns(uint256) {
+        uint256 poolBalance = loanToken.balanceOf(address(pool));
+        uint256 amountDefault = loanToken.amount().mul(poolBalance).div(loanToken.totalSupply());
+        return amountDefault;
+    }
+
+    function convertFeeToTFI() external {
+        // TODO
+        uint256 amountIn;
+        uint256 amountOutMin;
+        address[] memory path = new address[](2);
+        uniRouter.swapExactTokensForTokens(amountIn, amountOutMin, path, address(this), block.timestamp + 1 hours);
     }
 
     /**
      * @dev Calculate the floating rate of the sktTru
      */
     function sktTruRate() internal returns(uint256) {
-        uint256 rate = tru.balanceOf(address(this))
-                            .div(stkTRU.totalSupply());
+        uint256 rate = tru.balanceOf(address(this)).div(stkTRU.totalSupply());
         return rate;
     }
 
