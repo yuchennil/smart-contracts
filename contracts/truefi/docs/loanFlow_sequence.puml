@@ -67,7 +67,6 @@ activate TrueLender
 
 TrueLender -> LoanToken : check if __sender__ is **LoanToken's** //borrower//
 activate LoanToken
-LoanToken <- LoanToken : checks if requested address is //borrower//
 TrueLender <-- LoanToken
 deactivate LoanToken
 
@@ -76,15 +75,71 @@ activate LoanToken
 TrueLender <-- LoanToken : returns __true__
 deactivate LoanToken
 
-TrueLender -> LoanToken : asks for **LoanToken's** //currencyToken//
+TrueLender -> LoanToken : checks if **LoanToken's** //currencyToken// is equal to //currencyToken//
 activate LoanToken
-TrueLender <-- LoanToken : returns //currencyToken//
+TrueLender <-- LoanToken
 deactivate LoanToken
-TrueLender <- TrueLender : checks if **LoanToken's** //currencyToken// is equal to //currencyToken//
 
 TrueLender <- TrueLender : checks if length of //_loans// is lower than //maxLoans//
 
+TrueLender -> LoanToken : **getParameters**
+activate LoanToken
+TrueLender <-- LoanToken : returns //amount apy term//
+deactivate LoanToken
 
+TrueLender -> LoanToken : calculates **receivedAmount** including Borrower fee
+activate LoanToken
+TrueLender <-- LoanToken : returns //receivedAmount//
+deactivate LoanToken
 
+TrueLender -> TrueRatingAgency : **getResults** of voting
+activate TrueRatingAgency
+TrueLender <-- TrueRatingAgency : returns //start no yes//
+deactivate TrueRatingAgency
+
+TrueLender <- TrueLender : checks if //amount// is between //minSize// and //maxSize//
+TrueLender <- TrueLender : checks if //term// is between //minTerm// and //maxTerm//
+TrueLender <- TrueLender : checks if //apy// is between //minApy// and //maxApy//
+TrueLender <- TrueLender : checks if at least //votingTime// has passed from //start//
+TrueLender <- TrueLender : checks if //yes// have reached the threshold
+TrueLender <- TrueLender : checks if **loanIsCredible**
+
+TrueLender <- TrueLender : add **LoanToken** to //_loans//
+
+TrueLender -> TrueFiPool : **borrow** //receivedAmount// from **TrueFiPool**
+activate TrueFiPool
+
+TrueFiPool -> TUSD : **transfer** to **TrueLender**
+activate TUSD
+TUSD <- TUSD : remove from **TrueFiPool** balance and add to **TrueLenderBalance**
+TrueFiPool <-- TUSD
+deactivate TUSD
+
+TrueLender <-- TrueFiPool
+deactivate TrueFiPool
+
+TrueLender -> TUSD : **approve** **LoanToken** for //receivedAmount//
+activate TUSD
+TrueLender <-- TUSD
+deactivate TUSD
+
+TrueLender -> LoanToken : **fund** **LoanToken**
+activate LoanToken
+LoanToken <- LoanToken : change //status// to funded
+LoanToken <- LoanToken : set //start// of the loan
+LoanToken <- LoanToken : **_mint** LoanTokens to **TrueLender**
+LoanToken <- LoanToken : **_mint** LoanTokens to **TrueLender**
+
+LoanToken -> TUSD : **transfer** //receivedAmount// to **Borrower**
+activate TUSD
+TUSD <- TUSD : remove from **LoanToken** balance and add to **Borrower**
+LoanToken <-- TUSD
+deactivate TUSD
+
+TrueLender <-- LoanToken
+deactivate LoanToken
+
+Borrower <-- TrueLender
+deactivate TrueLender
 
 @enduml
