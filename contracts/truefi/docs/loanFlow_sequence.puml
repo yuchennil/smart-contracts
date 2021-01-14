@@ -76,6 +76,15 @@ activate LoanToken
 TrueLender <-- LoanToken : returns __true__
 deactivate LoanToken
 
+TrueLender -> LoanToken : asks for **LoanToken's** //currencyToken//
+activate LoanToken
+TrueLender <-- LoanToken : returns //currencyToken//
+deactivate LoanToken
+TrueLender <- TrueLender : checks if **LoanToken's** //currencyToken// is equal to //currencyToken//
+
+TrueLender <- TrueLender : checks if length of //_loans// is lower than //maxLoans//
+
+
 
 
 @enduml
