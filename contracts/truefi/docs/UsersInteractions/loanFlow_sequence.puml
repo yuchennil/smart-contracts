@@ -62,6 +62,20 @@ opt when PoolParticipant wants to withdraw some/all votes
     deactivate TrueRatingAgency
     end
 
+Borrower -> TrueLender : **fund** **LoanToken**
+activate TrueLender
+
+TrueLender -> LoanToken : check if __sender__ is **LoanToken's** //borrower//
+activate LoanToken
+LoanToken <- LoanToken : checks if requested address is //borrower//
+TrueLender <-- LoanToken
+deactivate LoanToken
+
+TrueLender -> LoanToken : check if **isLoanToken**
+activate LoanToken
+TrueLender <-- LoanToken : returns __true__
+deactivate LoanToken
+
 
 
 @enduml
