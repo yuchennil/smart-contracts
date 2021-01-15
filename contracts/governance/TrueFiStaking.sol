@@ -20,8 +20,9 @@ contract TrueFiStaking is ClaimableContract {
     ITrueFiPool public pool;
     IUniswapRouter public uniRouter;
 
-    address TUSD;
-    address WETH;
+    address public TUSD;
+    address public WETH;
+    address public TRU;
 
     /**
      * @dev Emitted when an account stakes
@@ -91,7 +92,10 @@ contract TrueFiStaking is ClaimableContract {
         IERC20 tru_, 
         ITrueDistributor _trueDistributor, 
         ITrueFiPool _pool,
-        IUniswapRouter _uniRouter
+        IUniswapRouter _uniRouter,
+        address _TUSD,
+        address _WETH,
+        address _TRU
     ) external {
         require(!initalized, "Already initialized");
         
@@ -102,6 +106,10 @@ contract TrueFiStaking is ClaimableContract {
         uniRouter = _uniRouter;
         owner_ = msg.sender;
         initalized = true;
+
+        TUSD = _TUSD;
+        WETH = _WETH;
+        TRU = _TRU;
 
         require(trueDistributor.farm() == address(this), "TrueFarm: Distributor farm is not set");
     }
@@ -176,14 +184,13 @@ contract TrueFiStaking is ClaimableContract {
      */
     function getTruAmount(uint256 usdAmount) internal returns(uint256) {
         address[] memory path = new address[](2);
-        path[0] = address("0x0000000000085d4780B73119b644AE5ecd22b376");  // TUSD address on mainnet
-        path[1] = address("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2");  // WETH address on mainnet
-        uint256 EthPrice = uniRouter.getAmountsIn(1, path);
-        uint256 EthAmount = usdAmount.div(EthPrice).mul(1e10);
-
-        path[0] = "0x4c19596f5aaff459fa38b0f7ed92f11ae6543784";           // TRU address on mainnet
-        uint256 truAmount = uniRouter.getAmountsIn(EthAmount, path);
-        return truAmount;
+        path[0] = TUSD;                                             // TUSD address on mainnet
+        path[1] = WETH;                                             // WETH address on mainnet
+        uint[] memory EthPrice = uniRouter.getAmountsIn(1, path);
+        uint256 EthAmount = usdAmount.div(EthPrice[0]).mul(1e10);
+        path[0] = TRU;                                              // TRU address on mainnet
+        uint[] memory truAmount = uniRouter.getAmountsIn(EthAmount, path);
+        return truAmount[0];
     }
 
     function getLoanDeficitAmount(ILoanToken loanToken) internal returns(uint256) {
