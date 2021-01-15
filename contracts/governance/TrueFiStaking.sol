@@ -77,8 +77,6 @@ contract TrueFiStaking is ClaimableContract {
     // max percentage of the TRU that can be slashed (10%)
     uint256 public constant MAXSLASH = 1000;
 
-    
-
     /**
      * @dev Initialize sets the addresses of admin and the delay timestamp
      * @param stkTRU_ The address of stkTRU contract
@@ -167,7 +165,6 @@ contract TrueFiStaking is ClaimableContract {
      * @param loanToken Address of the loanToken that is default
      */
     function liquidation(ILoanToken loanToken) external {
-        // ILoanToken loanToken = ILoanToken(_loanToken);
         require(loanToken.status() == ILoanToken.Status.Defaulted,"loanToken has not defaulted");
 
         uint256 amountDeficit = getLoanDeficitAmount(loanToken);
@@ -201,10 +198,10 @@ contract TrueFiStaking is ClaimableContract {
 
     function convertFeeToTFI() external {
         // TODO
-        uint256 amountIn;
-        uint256 amountOutMin;
-        address[] memory path = new address[](2);
-        uniRouter.swapExactTokensForTokens(amountIn, amountOutMin, path, address(this), block.timestamp + 1 hours);
+        // uint256 amountIn;
+        // uint256 amountOutMin;
+        // address[] memory path = new address[](2);
+        // uniRouter.swapExactTokensForTokens(amountIn, amountOutMin, path, address(this), block.timestamp + 1 hours);
     }
 
     /**
