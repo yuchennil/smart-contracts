@@ -19,7 +19,9 @@ import {
   GovernorAlphaFactory,
   GovernorAlpha,
   OwnedUpgradeabilityProxyFactory,
-  OwnedUpgradeabilityProxy
+  OwnedUpgradeabilityProxy,
+  StkTru,
+  StkTruFactory
 } from 'contracts'
 
 use(solidity)
@@ -29,6 +31,7 @@ describe('GovernorAlpha', () => {
   let timelock: Timelock
   let governorAlpha: GovernorAlpha
   let trustToken: TrustToken
+  let stkTru: StkTru
   let provider: providers.JsonRpcProvider
   let tokenProxy: OwnedUpgradeabilityProxy
   let target, values, signatures, callDatas, description
@@ -51,11 +54,17 @@ describe('GovernorAlpha', () => {
     trustToken = new TrustTokenFactory(owner).attach(tokenProxy.address)
     await trustToken.connect(owner).initialize()
 
+    //deploy stkTRU and proxy contract
+    tokenProxy = await new OwnedUpgradeabilityProxyFactory(owner).deploy()
+    await tokenProxy.upgradeTo((await new StkTruFactory(owner).deploy()).address)
+    stkTru = new StkTruFactory(owner).attach(tokenProxy.address)
+    await stkTru.connect(owner).initialize(owner.address)               // use owner as the staking address
+
     //deploy governorAlpha and proxy contract
     tokenProxy = await new OwnedUpgradeabilityProxyFactory(owner).deploy()
     await tokenProxy.upgradeTo((await new GovernorAlphaFactory(owner).deploy()).address)
     governorAlpha = new GovernorAlphaFactory(owner).attach(tokenProxy.address)
-    await governorAlpha.connect(owner).initialize(timelock.address,trustToken.address,owner.address)
+    await governorAlpha.connect(owner).initialize(timelock.address,trustToken.address,owner.address,stkTru.address)
 
     // mint votesAmount(5%) of tru
     await trustToken.mint(initialHolder.address,parseTRU(votesAmount)) 
@@ -103,7 +112,7 @@ describe('GovernorAlpha', () => {
     describe('cancel a proposal', () => {
       it('returns the cancel state of 2', async () => {
         expect(await governorAlpha.latestProposalIds(initialHolder.address)).to.eq(1)
-        await governorAlpha.connect(owner).cancel(1) //gudian can cancel a proposal
+        await governorAlpha.connect(owner).cancel(1)                                                //gudian can cancel a proposal
         expect(await governorAlpha.state(1)).to.eq(2)
       })
     })
@@ -127,8 +136,8 @@ describe('GovernorAlpha', () => {
   describe('queue', () => {
     beforeEach(async() => {
       await governorAlpha.connect(initialHolder).propose(target,values,signatures,callDatas,description)
-      await timeTravel(provider,1) //mine one block
-      await governorAlpha.connect(initialHolder).castVote(1,true) //castVote
+      await timeTravel(provider,1)                                                                  //mine one block
+      await governorAlpha.connect(initialHolder).castVote(1,true)                                   //castVote
       const endBlockRequired = (await governorAlpha.proposals(1)).endBlock.toNumber()
       await skipBlocksWithProvider(provider,endBlockRequired) 
     })
@@ -148,14 +157,14 @@ describe('GovernorAlpha', () => {
   describe('execute', () => {
     beforeEach(async() => {
       await governorAlpha.connect(initialHolder).propose(target,values,signatures,callDatas,description)
-      await timeTravel(provider,1) //mine one block
-      await governorAlpha.connect(initialHolder).castVote(1,true) //castVote
+      await timeTravel(provider,1)                                                                  //mine one block
+      await governorAlpha.connect(initialHolder).castVote(1,true)                                   //castVote
       const endBlockRequired = (await governorAlpha.proposals(1)).endBlock.toNumber()
       await skipBlocksWithProvider(provider,endBlockRequired) 
-      await governorAlpha.connect(owner).queue(1) //queue the proposal
-      await timeTravel(provider,3*24*3600) // delay 3 days
+      await governorAlpha.connect(owner).queue(1)                                                   //queue the proposal
+      await timeTravel(provider,3*24*3600)                                                          // delay 3 days
       expect(await timelock.pendingAdmin()).to.eq('0x0000000000000000000000000000000000000000')
-      await governorAlpha.connect(owner).execute(1) //execute
+      await governorAlpha.connect(owner).execute(1)                                                 //execute
     })
     describe('when governorAlpha execute a proposal', () => {
       it('returns proposal state equals to executed', async () => {
