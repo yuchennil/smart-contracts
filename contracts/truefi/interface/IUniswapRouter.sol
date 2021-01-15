@@ -9,4 +9,6 @@ interface IUniswapRouter {
         address to,
         uint256 deadline
     ) external returns (uint256[] memory amounts);
+
+    function getAmountsIn(uint amountOut, address[] calldata path) external view returns (uint[] memory amounts);
 }

@@ -5,6 +5,8 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import {ClaimableContract} from "./common/ClaimableContract.sol";
 import {ERC20} from "./common/ERC20.sol";
+import {VoteToken} from "../governance/VoteToken.sol";
+
 
 /**
  * @title TimeLockedToken
@@ -24,7 +26,7 @@ import {ERC20} from "./common/ERC20.sol";
  * are allowed to be transferred, and after all epochs have passed, the full
  * account balance is unlocked
  */
-abstract contract TimeLockedToken is ERC20, ClaimableContract {
+abstract contract TimeLockedToken is VoteToken {
     using SafeMath for uint256;
 
     // represents total distribution for locked balances
@@ -159,6 +161,15 @@ abstract contract TimeLockedToken is ERC20, ClaimableContract {
         return balanceOf[account].sub(lockedBalance(account));
     }
 
+    /**
+     * @dev Get the unlock balance 
+     * @param account Account to check
+     * @return Amount that is unlocked and available eg. to transfer
+     */
+    function _balanceOf(address account) internal override returns(uint256) {
+        return unlockedBalance(account);
+    }
+    
     /*
      * @dev Get number of epochs passed
      * @return Value between 0 and 8 of lockup epochs already passed

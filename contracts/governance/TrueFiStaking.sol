@@ -20,6 +20,9 @@ contract TrueFiStaking is ClaimableContract {
     ITrueFiPool public pool;
     IUniswapRouter public uniRouter;
 
+    address TUSD;
+    address WETH;
+
     /**
      * @dev Emitted when an account stakes
      * @param who Account staking
@@ -157,7 +160,7 @@ contract TrueFiStaking is ClaimableContract {
      */
     function liquidation(ILoanToken loanToken) external {
         // ILoanToken loanToken = ILoanToken(_loanToken);
-        // require(loanToken.status == loanToken.Status.Defaulted,"loanToken has not defaulted");
+        require(loanToken.status() == ILoanToken.Status.Defaulted,"loanToken has not defaulted");
 
         uint256 amountDeficit = getLoanDeficitAmount(loanToken);
         uint256 maxToSlash = tru.balanceOf(address(this)).mul(MAXSLASH).div(10000);
@@ -178,7 +181,7 @@ contract TrueFiStaking is ClaimableContract {
         uint256 EthPrice = uniRouter.getAmountsIn(1, path);
         uint256 EthAmount = usdAmount.div(EthPrice).mul(1e10);
 
-        path[0] = "0x4c19596f5aaff459fa38b0f7ed92f11ae6543784";         // TRU address on mainnet
+        path[0] = "0x4c19596f5aaff459fa38b0f7ed92f11ae6543784";           // TRU address on mainnet
         uint256 truAmount = uniRouter.getAmountsIn(EthAmount, path);
         return truAmount;
     }

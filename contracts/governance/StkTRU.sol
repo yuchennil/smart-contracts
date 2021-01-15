@@ -6,23 +6,17 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 
 contract StkTRU is VoteToken {
-    mapping(address=>bool) whitelisted;
 
+    address public stakingContract;
     /**
-     * @dev Modifier to check whitelist address
+     * @dev initialize trusttoken and give ownership to sender
+     * This is necessary to set ownership for proxy
      */
-    modifier onlyWhitelisted {
-        require(whitelisted[msg.sender], "sender not whiteslited");
-        _;
-    }
-
-    /**
-     * @dev Add or remove an address to whitelist
-     * @param account The target address to add or remove from whitelist
-     * @param status A boolean status of add or remove from whitelist
-     */
-    function whitelist(address account, bool status) external onlyOwner {
-        whitelisted[account] = status;
+    function initialize(address _stakingContract) public {
+        require(!initalized, "already initialized");
+        owner_ = msg.sender;
+        initalized = true;
+        stakingContract = _stakingContract;
     }
 
     /**
@@ -30,7 +24,7 @@ contract StkTRU is VoteToken {
      * @param account The target address to mint stkTRU
      * @param amount The amount to mint
      */
-    function mint(address account, uint256 amount) external onlyWhitelisted {
+    function mint(address account, uint256 amount) external onlyStakingContract {
         _mint(account, amount);
     }
 
@@ -39,7 +33,7 @@ contract StkTRU is VoteToken {
      * @param account The target address to burn stkTRU
      * @param amount The amount to burn
      */
-    function burn(address account, uint256 amount) external onlyWhitelisted {
+    function burn(address account, uint256 amount) external onlyStakingContract {
         _burn(account, amount);
     }
 
@@ -57,6 +51,11 @@ contract StkTRU is VoteToken {
 
     function symbol() public override pure returns (string memory) {
         return "stkTRU";
+    }
+
+    modifier onlyStakingContract() {
+        require(msg.sender == stakingContract,"only staking contract is allowed");
+        _;
     }
 }
 
