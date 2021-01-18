@@ -64,7 +64,7 @@ describe('GovernorAlpha', () => {
     tokenProxy = await new OwnedUpgradeabilityProxyFactory(owner).deploy()
     await tokenProxy.upgradeTo((await new GovernorAlphaFactory(owner).deploy()).address)
     governorAlpha = new GovernorAlphaFactory(owner).attach(tokenProxy.address)
-    await governorAlpha.connect(owner).initialize(timelock.address,trustToken.address,owner.address,stkTru.address)
+    await governorAlpha.connect(owner).initialize(timelock.address,trustToken.address,owner.address,stkTru.address,17280)
 
     // mint votesAmount(5%) of tru
     await trustToken.mint(initialHolder.address,parseTRU(votesAmount)) 

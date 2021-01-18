@@ -4,6 +4,7 @@ pragma solidity ^0.6.10;
 import {VoteToken} from "./VoteToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
+import {ITrueFiStaking} from "./Interface/ITrueFiStaking.sol";
 
 contract StkTRU is VoteToken {
 
@@ -57,6 +58,11 @@ contract StkTRU is VoteToken {
         require(msg.sender == stakingContract,"only staking contract is allowed");
         _;
     }
+
+    function votingWeight() internal override returns(uint256) {
+        ITrueFiStaking staking = ITrueFiStaking(stakingContract);
+        return staking.sktTruRate();
+    }   
 }
 
 interface IStkTRU {

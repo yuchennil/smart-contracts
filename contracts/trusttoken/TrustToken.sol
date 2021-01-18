@@ -59,4 +59,8 @@ contract TrustToken is TimeLockedToken {
     function symbol() public override pure returns (string memory) {
         return "TRU";
     }
+
+    function votingWeight() internal override returns(uint256) {
+        return 10000;
+    }   
 }

@@ -19,6 +19,7 @@ import {ERC20} from "../trusttoken/common/ERC20.sol";
 abstract contract VoteToken is ClaimableContract, ERC20 {
     bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
     bytes32 public constant DELEGATION_TYPEHASH = keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)");
+    uint96 constant PRECISION = 10000;
     
     event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
     event DelegateVotesChanged(address indexed delegate, uint previousBalance, uint newBalance);
@@ -44,7 +45,10 @@ abstract contract VoteToken is ClaimableContract, ERC20 {
         return nCheckpoints > 0 ? checkpoints[account][nCheckpoints - 1].votes : 0;
     }
 
-    function getPriorVotes(address account, uint blockNumber) public view returns (uint96) {
+    function votingWeight() internal virtual returns(uint256) {
+    }
+
+    function getPriorVotes(address account, uint blockNumber) public returns (uint96) {
         require(blockNumber < block.number, "TrustToken::getPriorVotes: not yet determined");
 
         uint32 nCheckpoints = numCheckpoints[account];
@@ -54,7 +58,7 @@ abstract contract VoteToken is ClaimableContract, ERC20 {
 
         // First check most recent balance
         if (checkpoints[account][nCheckpoints - 1].fromBlock <= blockNumber) {
-            return checkpoints[account][nCheckpoints - 1].votes;
+            return checkpoints[account][nCheckpoints - 1].votes * uint96(votingWeight()) / PRECISION;
         }
 
         // Next check implicit zero balance
@@ -75,7 +79,7 @@ abstract contract VoteToken is ClaimableContract, ERC20 {
                 upper = center - 1;
             }
         }
-        return checkpoints[account][lower].votes;
+        return checkpoints[account][lower].votes * uint96(votingWeight()) / PRECISION;
     }
 
     function _delegate(address delegator, address delegatee) internal {

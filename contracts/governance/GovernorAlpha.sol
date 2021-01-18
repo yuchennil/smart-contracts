@@ -35,7 +35,8 @@ contract GovernorAlpha is ClaimableContract {
     function votingDelay() public pure returns (uint) { return 1; } // 1 block
 
     // @notice The duration of voting on a proposal, in blocks
-    function votingPeriod() public pure returns (uint) { return 17280; } // ~3 days in blocks (assuming 15s blocks)
+    // OLD: function votingPeriod() public pure returns (uint) { return 17280; } // ~3 days in blocks (assuming 15s blocks)
+    uint public votingPeriod;
 
     // @notice The address of the TrustToken Protocol Timelock
     TimelockInterface public timelock;
@@ -151,11 +152,12 @@ contract GovernorAlpha is ClaimableContract {
     /**
      * @dev Initialize sets the addresses of timelock contract, trusttoken contract, and guardian
      */
-    function initialize(address timelock_, address trustToken_, address guardian_, address stkTRU_) external {
+    function initialize(address timelock_, address trustToken_, address guardian_, address stkTRU_, uint256 votingPeriod_) external {
         timelock = TimelockInterface(timelock_);
         trustToken = TrustTokenInterface(trustToken_);
         stkTRU = TrustTokenInterface(stkTRU_);
         guardian = guardian_;
+        votingPeriod = votingPeriod_;
         
         owner_ = msg.sender;
         initalized = true;
@@ -184,7 +186,8 @@ contract GovernorAlpha is ClaimableContract {
         }
 
         uint startBlock = add256(block.number, votingDelay());
-        uint endBlock = add256(startBlock, votingPeriod());
+        // OLD: uint endBlock = add256(startBlock, votingPeriod());
+        uint endBlock = add256(startBlock, votingPeriod);
 
         proposalCount++;
         Proposal memory newProposal = Proposal({
