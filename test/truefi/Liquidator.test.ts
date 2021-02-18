@@ -18,6 +18,7 @@ import {
 import { deployMockContract, MockContract, MockProvider } from 'ethereum-waffle'
 import { Contract, Wallet } from 'ethers'
 import { beforeEachWithFixture, parseEth, parseTRU, timeTravel } from 'utils'
+import { AddressZero } from '@ethersproject/constants'
 
 describe('Liquidator', () => {
   enum LoanTokenStatus { Awaiting, Funded, Withdrawn, Settled, Defaulted, Liquidated }
@@ -65,6 +66,7 @@ describe('Liquidator', () => {
       pool.address,
       distributor.address,
       liquidator.address,
+      AddressZero,
     )
 
     await liquidator.initialize(

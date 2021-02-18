@@ -17,7 +17,8 @@ import {
 } from 'utils'
 
 import {
-  LinearTrueDistributor, LinearTrueDistributorFactory,
+  LinearTrueDistributor,
+  LinearTrueDistributorFactory,
   MockTrueCurrency,
   MockTrueCurrencyFactory,
   StkTruToken,
@@ -51,7 +52,7 @@ describe('StkTruToken', () => {
     distributor = await deployContract(LinearTrueDistributorFactory)
 
     stkToken = await deployContract(StkTruTokenFactory)
-    await stkToken.initialize(tru.address, tfusd.address, distributor.address, liquidator.address)
+    await stkToken.initialize(tru.address, tfusd.address, distributor.address, liquidator.address, owner.address)
 
     await tru.mint(owner.address, amount)
     await tru.approve(stkToken.address, amount)
@@ -365,6 +366,23 @@ describe('StkTruToken', () => {
   })
 
   describe('Pay fee', async () => {
+    describe('setCanPayFee', () => {
+      it('can only be called by owner', async () => {
+        await expect(stkToken.connect(staker).setCanPayFee(staker.address, true)).to.be.revertedWith('only owner')
+      })
+
+      it('changes canPayFee', async () => {
+        await stkToken.setCanPayFee(staker.address, true)
+        expect(await stkToken.canPayFee(staker.address)).to.be.true
+        await stkToken.setCanPayFee(staker.address, false)
+        expect(await stkToken.canPayFee(staker.address)).to.be.false
+      })
+
+      it('emits event', async () => {
+        await expect(stkToken.setCanPayFee(staker.address, true)).to.emit(stkToken, 'CanPayFeeChanged').withArgs(staker.address, true)
+      })
+    })
+
     const futureTimestamp = 1700000000
 
     const getSortedTimestamps = async () => {
@@ -383,6 +401,10 @@ describe('StkTruToken', () => {
     beforeEach(async () => {
       await tfusd.mint(owner.address, MaxUint256)
       await tfusd.approve(stkToken.address, MaxUint256)
+    })
+
+    it('only whitelisted accounts can pay fee', async () => {
+      await expect(stkToken.connect(staker).payFee(1, 100)).to.be.revertedWith('StkTruToken: Cannot pay fee')
     })
 
     it('keeps list sorted', async () => {

@@ -65,6 +65,7 @@ contract StkTruToken is VoteToken, ClaimableContract, ReentrancyGuard {
     uint256 public undistributedTfusdRewards;
     uint32 public nextDistributionIndex;
 
+    mapping(address => bool) public canPayFee;
     // ======= STORAGE DECLARATION END ============
 
     event Stake(address indexed staker, uint256 amount);
@@ -74,12 +75,21 @@ contract StkTruToken is VoteToken, ClaimableContract, ReentrancyGuard {
     event Cooldown(address indexed who, uint256 endTime);
     event CooldownTimeChanged(uint256 newUnstakePeriodDuration);
     event UnstakePeriodDurationChanged(uint256 newUnstakePeriodDuration);
+    event CanPayFeeChanged(address who, bool status);
 
     /**
      * @dev Only Liquidator contract can perform TRU liquidations
      */
     modifier onlyLiquidator() {
         require(msg.sender == liquidator, "StkTruToken: Can be called only by the liquidator");
+        _;
+    }
+
+    /**
+     * @dev Only allowed addresses can pay fee
+     */
+    modifier onlyCanPayFee() {
+        require(canPayFee[msg.sender], "StkTruToken: Cannot pay fee");
         _;
     }
 
@@ -115,13 +125,15 @@ contract StkTruToken is VoteToken, ClaimableContract, ReentrancyGuard {
         IERC20 _tru,
         IERC20 _tfusd,
         ITrueDistributor _distributor,
-        address _liquidator
+        address _liquidator,
+        address _lender
     ) public {
         require(!initalized, "StkTruToken: Already initialized");
         tru = _tru;
         tfusd = _tfusd;
         distributor = _distributor;
         liquidator = _liquidator;
+        canPayFee[_lender] = true;
 
         cooldownTime = 14 days;
         unstakePeriodDuration = 2 days;
@@ -155,6 +167,15 @@ contract StkTruToken is VoteToken, ClaimableContract, ReentrancyGuard {
 
         unstakePeriodDuration = newUnstakePeriodDuration;
         emit UnstakePeriodDurationChanged(newUnstakePeriodDuration);
+    }
+
+    /**
+     * @dev Set who can and cannot pay fee
+     */
+    function setCanPayFee(address who, bool status) external onlyOwner {
+        canPayFee[who] = status;
+
+        emit CanPayFeeChanged(who, status);
     }
 
     /**
@@ -241,7 +262,7 @@ contract StkTruToken is VoteToken, ClaimableContract, ReentrancyGuard {
      * @dev Give tfUSD as origination fee to stake.this
      * 50% are given immediately and 50% after `endTime` passes
      */
-    function payFee(uint256 amount, uint256 endTime) external {
+    function payFee(uint256 amount, uint256 endTime) external onlyCanPayFee {
         require(endTime < type(uint64).max, "StkTruToken: time overflow");
         require(amount < type(uint96).max, "StkTruToken: amount overflow");
 
