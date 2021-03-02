@@ -159,22 +159,27 @@ contract TrueSushiFarm is ITrueFarm, Initializable {
      * @dev Remove staked tokens
      * @param amount Amount of tokens to unstake
      */
-    function unstake(uint256 amount) external override update(trustToken) update(sushi) {
+    function unstake(uint256 amount) external override {
+        _update(trustToken);
         _unstake(amount);
+        _update(sushi);
     }
 
     /**
      * @dev Claim TRU & SUSHI rewards
      */
-    function claim() external override update(trustToken) update(sushi) {
+    function claim() external override {
+        _update(trustToken);
         _claim(trustToken);
+        _update(sushi);
         _claim(sushi);
     }
 
     /**
      * @dev Claim rewards of choice
      */
-    function claim(IERC20 token) external update(trustToken) update(sushi) {
+    function claim(IERC20 token) external {
+        _update(token);
         _claim(token);
     }
 
@@ -182,8 +187,10 @@ contract TrueSushiFarm is ITrueFarm, Initializable {
      * @dev Unstake amount and claim rewards
      * @param amount Amount of tokens to unstake
      */
-    function exit(uint256 amount) external override update(trustToken) update(sushi) {
+    function exit(uint256 amount) external override {
+        _update(trustToken);
         _unstake(amount);
+        _update(sushi);
         _claim(trustToken);
         _claim(sushi);
     }
@@ -213,7 +220,7 @@ contract TrueSushiFarm is ITrueFarm, Initializable {
     /**
      * @dev Update state and get TRU from distributor
      */
-    modifier update(IERC20 token) {
+    function _update(IERC20 token) internal {
         // pull TRU from distributor
         // only pull if there is distribution and distributor farm is set to this farm
         if (token == trustToken && trueDistributor.nextDistribution() > 0 && trueDistributor.farm() == address(this)) {
