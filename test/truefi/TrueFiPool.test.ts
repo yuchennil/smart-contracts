@@ -1,10 +1,10 @@
 import { expect } from 'chai'
-import { constants, Wallet, BigNumber } from 'ethers'
+import { constants, Wallet, BigNumber, utils } from 'ethers'
 import { deployMockContract, MockContract, MockProvider } from 'ethereum-waffle'
 
 import { toTrustToken } from 'scripts/utils'
 
-import { beforeEachWithFixture, expectScaledCloseTo, timeTravel, parseEth, expectCloseTo } from 'utils'
+import { beforeEachWithFixture, expectScaledCloseTo, timeTravel, parseEth, expectCloseTo, parseTRU } from 'utils'
 
 import {
   ICurveGaugeJson,
@@ -21,7 +21,10 @@ import {
   PoolArbitrageTestFactory,
   TrueRatingAgencyJson,
   MockStakingPool,
-  MockStakingPoolFactory, MockTruPriceOracleFactory,
+  MockStakingPoolFactory,
+  MockTruPriceOracleFactory,
+  MockCrvPriceOracleFactory,
+  ICurveMinterJson,
 } from 'contracts'
 import { AddressZero } from '@ethersproject/constants'
 
@@ -37,6 +40,7 @@ describe('TrueFiPool', () => {
   let pool: TrueFiPool
   let lender: TrueLender
   let mockRatingAgency: MockContract
+  let mockCrv: MockErc20Token
   let mockCurveGauge: MockContract
 
   const dayInSeconds = 60 * 60 * 24
@@ -54,12 +58,16 @@ describe('TrueFiPool', () => {
     mockStakingPool = await new MockStakingPoolFactory(owner).deploy(pool.address)
     mockRatingAgency = await deployMockContract(owner, TrueRatingAgencyJson.abi)
     mockCurveGauge = await deployMockContract(owner, ICurveGaugeJson.abi)
+    mockCrv = await new MockErc20TokenFactory(owner).deploy()
+    const mockMinter = await deployMockContract(owner, ICurveMinterJson.abi)
     await mockCurveGauge.mock.deposit.returns()
     await mockCurveGauge.mock.withdraw.returns()
     await mockCurveGauge.mock.balanceOf.returns(0)
-    await mockCurveGauge.mock.minter.returns(constants.AddressZero)
+    await mockCurveGauge.mock.minter.returns(mockMinter.address)
+    await mockMinter.mock.token.returns(mockCrv.address)
     lender = await new TrueLenderFactory(owner).deploy()
-    const oracle = await new MockTruPriceOracleFactory(owner).deploy()
+    const truOracle = await new MockTruPriceOracleFactory(owner).deploy()
+    const crvOracle = await new MockCrvPriceOracleFactory(owner).deploy()
     await pool.initialize(
       curvePool.address,
       mockCurveGauge.address,
@@ -67,7 +75,8 @@ describe('TrueFiPool', () => {
       lender.address,
       constants.AddressZero,
       trustToken.address,
-      oracle.address,
+      truOracle.address,
+      crvOracle.address,
     )
     await pool.resetApprovals()
     await lender.initialize(pool.address, mockRatingAgency.address, mockStakingPool.address)
@@ -169,9 +178,12 @@ describe('TrueFiPool', () => {
       await pool.flush(parseEth(5e6), 0)
       await curvePool.set_withdraw_price(parseEth(2))
       expectScaledCloseTo(await pool.poolValue(), parseEth(4e6).add(parseEth(105e4).add(parseEth(1e7))).add(calcBorrowerFee(parseEth(2e6))))
-      // uncomment when we decide to include TRU in pool value calculations
-      // await trustToken.mint(pool.address, parseTRU(4e5))
-      // expectScaledCloseTo(await pool.poolValue(), parseEth(4e6).add(parseEth(105e4).add(parseEth(1e7)).add(parseEth(1e5))).add(calcBorrowerFee(parseEth(2e6)))))
+      await trustToken.mint(pool.address, parseTRU(4e5))
+      expect(await pool.truValue()).to.equal(parseEth(98000)) // 100000 - 2%
+      expectScaledCloseTo(await pool.poolValue(), parseEth(4e6).add(parseEth(105e4).add(parseEth(1e7)).add(parseEth(98000))).add(calcBorrowerFee(parseEth(2e6))))
+      await mockCrv.mint(pool.address, parseEth(1e5))
+      expect(await pool.crvValue()).to.equal(parseEth(4.9e4)) // 50000 - 2%
+      expectScaledCloseTo(await pool.poolValue(), parseEth(4e6).add(parseEth(105e4).add(parseEth(1e7)).add(parseEth(98000))).add(parseEth(4.9e4)).add(calcBorrowerFee(parseEth(2e6))))
     })
   })
 
@@ -258,16 +270,19 @@ describe('TrueFiPool', () => {
       await timeTravel(provider, dayInSeconds * 182.5)
       const loan2 = await new LoanTokenFactory(owner).deploy(token.address, borrower.address, lender.address, lender.address, parseEth(1e6), dayInSeconds * 365, 2500)
       await lender.connect(borrower).fund(loan2.address)
-      await trustToken.mint(pool.address, parseEth(1e7))
+      await trustToken.mint(pool.address, parseTRU(1e7))
+      await mockCrv.mint(pool.address, parseEth(3e5))
 
       const liquidValue = await pool.liquidValue()
       const tfiBalance = await pool.stakeTokenBalance()
+      const crvBalance = await pool.crvBalance()
       const totalSupply = await pool.totalSupply()
       const exitAmount = totalSupply.div(2)
 
       await pool.exit(exitAmount)
       expect(await token.balanceOf(owner.address)).to.equal(exitAmount.mul(liquidValue).div(totalSupply))
       expect(await trustToken.balanceOf(owner.address)).to.equal(exitAmount.mul(tfiBalance).div(totalSupply))
+      expect(await mockCrv.balanceOf(owner.address)).to.equal(exitAmount.mul(crvBalance).div(totalSupply))
       expectCloseTo(await loan1.balanceOf(owner.address), parseEth(55e4), 10)
       expectCloseTo(await loan2.balanceOf(owner.address), parseEth(625e3), 10)
     })
@@ -403,6 +418,7 @@ describe('TrueFiPool', () => {
         borrower.address,
         constants.AddressZero,
         trustToken.address,
+        AddressZero,
         AddressZero,
       )
       await token.approve(pool2.address, includeFee(parseEth(1e7)))
