@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.6.10;
+pragma experimental ABIEncoderV2;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -14,6 +15,7 @@ import {IUniswapRouter} from "./interface/IUniswapRouter.sol";
 import {ABDKMath64x64} from "./Log.sol";
 import {ITruPriceOracle} from "./interface/ITruPriceOracle.sol";
 import {ICrvPriceOracle} from "./interface/ICrvPriceOracle.sol";
+import {I1Inch} from "./interface/I1Inch.sol";
 
 /**
  * @title TrueFi Pool
@@ -72,6 +74,8 @@ contract TrueFiPool is ITrueFiPool, ERC20, ReentrancyGuard, Ownable {
     // CRV price oracle
     ICrvPriceOracle public _crvOracle;
 
+    I1Inch public _1inchExchange;
+
     // ======= STORAGE DECLARATION END ============
 
     // curve.fi data
@@ -97,6 +101,12 @@ contract TrueFiPool is ITrueFiPool, ERC20, ReentrancyGuard, Ownable {
      * @param newOracle New oracle address
      */
     event CrvOracleChanged(ICrvPriceOracle newOracle);
+
+    /**
+     * @dev Emitted 1Inch address was changed
+     * @param new1Inch New 1Inch address
+     */
+    event OneInchChanged(I1Inch new1Inch);
 
     /**
      * @dev Emitted when funds manager is changed
@@ -299,6 +309,14 @@ contract TrueFiPool is ITrueFiPool, ERC20, ReentrancyGuard, Ownable {
     function setCrvOracle(ICrvPriceOracle newOracle) public onlyOwner {
         _crvOracle = newOracle;
         emit CrvOracleChanged(newOracle);
+    }
+
+    /**
+     * @dev set 1Inch swap address
+     */
+    function set1InchAddress(I1Inch new1InchAddress) public onlyOwner {
+        _1inchExchange = new1InchAddress;
+        emit OneInchChanged(new1InchAddress);
     }
 
     /**
@@ -709,6 +727,22 @@ contract TrueFiPool is ITrueFiPool, ERC20, ReentrancyGuard, Ownable {
         }
 
         emit Collected(beneficiary, amount);
+    }
+
+    function sellCrvWith1Inch(bytes calldata data) external onlyOwnerOrManager {
+        (address caller, I1Inch.SwapDescription memory description, ) = abi.decode(
+            data[4:],
+            (address, I1Inch.SwapDescription, I1Inch.CallDescription[])
+        );
+        require(caller == 0xe069CB01D06bA617bCDf789bf2ff0D5E5ca20C71, "TrueFiPool: Unknown caller");
+        require(description.srcToken == address(_minter.token()), "TrueFiPool: Source token is not CRV");
+        require(description.dstToken == address(_currencyToken), "TrueFiPool: Destination token is not TUSD");
+        require(description.dstReceiver == address(this), "TrueFiPool: Receiver is not pool");
+
+        _minter.token().approve(address(_1inchExchange), description.amount);
+        (bool success, ) = address(_1inchExchange).call(data);
+        require(success, "TrueFiPool: 1Inch swap failed");
+        // TODO add post sell slippage check
     }
 
     /**
